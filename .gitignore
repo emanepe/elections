@@ -1,0 +1,7 @@
+.env*
+!.env.market_compare.example
+market_compare_output/
+__pycache__/
+*.py[cod]
+.venv/
+*.log
