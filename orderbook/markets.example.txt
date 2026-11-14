@@ -1,0 +1,5 @@
+# 연결 확인용 예시입니다. 2026 선거 과거 분석 대상과 구분합니다.
+# 실제 연구 시 대표가 정한 활성 마켓 링크/slug로 바꿔서 별도 markets.txt에 저장합니다.
+# 아래 두 시장은 2026-11-14에 실제 수신 시험했습니다. 종료되면 교체해야 합니다.
+will-jd-vance-win-the-2028-us-presidential-election
+will-gavin-newsom-win-the-2028-us-presidential-election

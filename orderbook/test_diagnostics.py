@@ -117,6 +117,23 @@ class DiagnosticTests(unittest.TestCase):
                 self.assertEqual(reader.fieldnames, ["result", "signal"])
                 self.assertEqual(list(reader), [])
 
+    def test_csv_export_also_quarantines_until_snapshot_recovery(self):
+        from collections import Counter
+        from io import StringIO
+        from export_orderbook_csv import export_session, FIELDS
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            self.create_session(folder, [(0, [book("yes"), book("no")]),
+                (10, delta("yes", "20", best_bid="0.48")),
+                (20, delta("yes", "30")), (30, book("yes", bid_size="30"))])
+            quotes, trades = StringIO(), StringIO()
+            counts = Counter()
+            export_session(folder, csv.writer(trades), csv.writer(quotes), counts)
+            rows = [dict(zip(FIELDS, row)) for row in csv.reader(StringIO(quotes.getvalue()))]
+            self.assertEqual([r["timestamp_ms"] for r in rows if r["up_mid"]], ["0", "30"])
+            self.assertEqual(counts["bbo_mismatch"], 1)
+            self.assertEqual(counts["snapshot_recovered"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

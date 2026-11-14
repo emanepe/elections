@@ -1,10 +1,11 @@
 # Polymarket Election Order Book Study
 
-Polymarket 선거 마켓 네 개에서 공개 호가를 수집하고, 매수·매도 대기 물량의 차이와 이후 가격 변화를 비교합니다. 아래 명령은 저장소의 `orderbook/` 폴더에서 실행합니다.
+선택한 Polymarket 활성 Yes/No 마켓에서 공개 호가를 실시간 수집하고, 대기 물량의 차이와 이후 호가 중간값 변화를 비교합니다. 대표·팀원용 안내는 [QUICKSTART.md](QUICKSTART.md)에 있습니다. 아래 명령은 저장소의 `orderbook/` 폴더에서 실행합니다.
 
 | 파일 | 용도 |
 |---|---|
-| `capture.mjs` | 알래스카·미시간·플로리다·아이오와 마켓의 Yes·No WebSocket 메시지 기록 |
+| `run.py` | 실시간 수집 → 팀 양식 CSV → 탐색 분석을 한 번에 실행 |
+| `capture.mjs` | 지정한 활성 질문/이벤트의 Yes·No 메시지 기록, 상태 표시, 재연결 |
 | `export_orderbook_csv.py` | 원본 로그를 팀 양식의 체결 CSV와 호가 CSV로 변환 |
 | `diagnose.py` | 예상 방향·보합·반대 방향을 분류하고 시작·종료 호가와 잔량 비교 |
 | `study.py` | 호가 복원과 기존 1·5·30초 중간값 집계 |
@@ -16,10 +17,12 @@ Polymarket 선거 마켓 네 개에서 공개 호가를 수집하고, 매수·�
 Node.js 22.15+와 Python 3.10+를 사용합니다. 추가 패키지와 API 키는 필요 없습니다. 실시간 수집에는 활성 상태인 마켓과 Polymarket 공개 데이터에 연결 가능한 네트워크가 필요합니다. 종료된 마켓은 이미 수집한 로그로 재현합니다.
 
 ```sh
-node capture.mjs 80
+python3 run.py --market "활성 마켓 링크 또는 slug" --minutes 80
 ```
 
-80은 수집 시간(분)입니다. 한 세션은 `ws_data/<session>/metadata.json`과 `events.jsonl`로 구성됩니다. 기존 로그를 사용하려면 아래 `SESSIONS`에 경로를 넣습니다. 수집 폴더와 생성 결과는 Git에서 제외됩니다.
+80은 수집 시간(분)입니다. 링크/slug는 실제 값으로 바꿉니다. `--check`로 15초 연결·CSV 생성 시험을 먼저 할 수 있습니다. 여러 질문은 `--market`을 반복하거나 `--markets-file markets.txt`를 사용합니다. 종료된 2026 선거를 기본값으로 자동 선택하지 않습니다.
+
+한 세션은 `ws_data/<session>/metadata.json`, `events.jsonl`, `status.json`, `run_summary.json`, `csv/`, `analysis/`로 구성됩니다. 수집 중 원본 로그와 상태 파일이 갱신되며, CSV와 분석은 수집 종료 또는 Ctrl+C 뒤에 생성됩니다. 5초 콘솔 표시는 진행 상태 갱신 주기입니다. 데이터는 WebSocket으로 도착할 때마다 기록합니다. 기존 로그를 사용하려면 아래 `SESSIONS`에 경로를 넣습니다. 수집 폴더와 생성 결과는 Git에서 제외됩니다.
 
 ```bash
 SESSIONS=( ws_data/* )
@@ -27,6 +30,7 @@ python3 export_orderbook_csv.py "${SESSIONS[@]}" --output-dir exports
 python3 diagnose.py "${SESSIONS[@]}" --sampling grid --output-dir results/grid_checked --cutoff-utc 2026-11-04T11:34:09Z
 python3 diagnose.py "${SESSIONS[@]}" --sampling signal --output-dir results/signal_checked --cutoff-utc 2026-11-04T11:34:09Z
 python3 -m unittest -v
+node --test test_capture.mjs
 ```
 
 - `exports/`에 팀 양식과 동일한 18열의 체결·호가 CSV를 별도로 출력합니다. 팀 예시의 체결 행은 양쪽 호가 이름의 열에 동일한 체결 가격·수량을 넣습니다. 잔량 분석에는 호가 CSV를 사용합니다. Yes는 `up`, No는 `down`으로 매핑합니다.
@@ -60,6 +64,14 @@ python3 diagnose.py "${SESSIONS[@]}" --sampling signal --latency-ms 70 --round-t
 
 simulated_gross_cents는 비용 전, simulated_net_cents는 지정 비용 차감 후 계약당 손익입니다. summary.csv의 스프레드 그룹은 신호 시점 Yes 기준입니다. 실제 진입 대상 Yes 또는 No의 호가 간격은 simulated_entry_spread_cents에 별도로 남깁니다. 데이터는 단일 날짜의 탐색 결과이며 별도 날짜와 시장에서 재검증해야 합니다.
 
+## 실시간 운영 상태
+
+`status.json`은 수신 메시지, 구독 대상의 유효 메시지, 현재 연결의 초기 호가 수신 토큰 수, 연결·재연결 횟수, 마지막 수신·오류, 저장 바이트를 기록합니다. 일정 시간마다 원자적으로 교체합니다. 전체 초기 호가를 받지 못했거나 유효 메시지가 0개면 종료 코드는 0이 아니며 `partial` 또는 `empty`로 남깁니다. 종료 시 연결이 복구되지 않은 경우도 `partial`입니다. `run_summary.json`에서 수집·CSV·분석의 성공 여부를 따로 확인합니다. 신호가 없으면 정상 수집이어도 분석 파일이 없을 수 있으며 `no_usable_windows`로 기록합니다. 분석 프로그램 오류는 별도로 `failed`와 0이 아닌 종료 코드로 알립니다.
+
+서버 메시지 원문을 먼저 보관하고, CSV에서도 복원 호가 불일치 후 전체 스냅샷 회복 전까지 제외합니다. 타임스탬프는 수신 시각(밀리초)과 로컬 단조 시계(ns)를 함께 기록합니다. ns는 거래소 발생 시각이나 지연 0을 의미하지 않습니다.
+
+공식 [Market Stream 문서](https://docs.polymarket.com/market-data/realtime-data)의 공개 WebSocket 구독 및 10초 PING 절차를 사용합니다. 실제 API·WebSocket 시험과 자동 검증 범위는 [LIVE_CHECK.md](LIVE_CHECK.md)에 기록합니다.
+
 ## 저장소에 포함된 분석 자료
 
-[11월 4일 보고서](FINDINGS.md)와 [시장·신호별 집계 CSV](reports/20261104/)를 포함합니다. 원본 로그와 개별 관측 CSV는 용량이 커서 Git에 포함하지 않습니다. 기존 로컬 데이터는 SESSIONS에 실제 경로를 지정해 사용합니다. 수집 대상 기본 네 마켓은 종료되었을 수 있으므로, 새 수집은 활성 마켓 slug를 직접 지정합니다. 예: `node capture.mjs 80 MARKET_SLUG_1 MARKET_SLUG_2` (대문자 자리표시자는 실제 slug로 바꿉니다).
+[11월 4일 보고서](FINDINGS.md)와 [시장·신호별 집계 CSV](reports/20261104/)를 포함합니다. 원본 로그와 개별 관측 CSV는 용량이 커서 Git에 포함하지 않습니다. 기존 로컬 데이터는 SESSIONS에 실제 경로를 지정해 사용합니다. 과거 네 마켓은 11월 4일 자료의 대상입니다. 새 수집은 활성 마켓 slug를 직접 지정합니다. 예: `node capture.mjs 80 MARKET_SLUG_1 MARKET_SLUG_2` (대문자 자리표시자는 실제 slug로 바꿉니다).

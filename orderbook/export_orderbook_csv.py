@@ -13,8 +13,10 @@ import json
 import tempfile
 from collections import Counter
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
+
+from collect import levels as validated_levels
 
 SIDES = ("up", "down")
 FIELDS = ["timestamp", "timestamp_ms", "datetime", "market_timestamp",
@@ -47,12 +49,10 @@ def row_for(ts_ms, market, kind, prices):
 
 
 def get_levels(entries):
-    levels = {}
-    for entry in entries:
-        price, size = Decimal(entry["price"]), Decimal(entry["size"])
-        if size > 0:
-            levels[price] = size
-    return levels
+    parsed, invalid = validated_levels(entries, True)
+    if invalid:
+        raise ValueError('Invalid snapshot levels')
+    return dict(parsed)
 
 
 def quote(book, reported):
@@ -71,6 +71,7 @@ def quote(book, reported):
 def export_session(session, trades, quotes, counts):
     tokens = read_tokens(session)
     books = {}
+    desynchronized = set()
     connection = None
     with (session / "events.jsonl").open(encoding="utf-8") as stream:
         for line in stream:
@@ -80,6 +81,7 @@ def export_session(session, trades, quotes, counts):
             record = json.loads(line)
             if record["connection"] != connection or record["kind"] != "message":
                 books.clear()
+                desynchronized.clear()
                 connection = record["connection"]
             if record["kind"] != "message":
                 continue
@@ -102,6 +104,9 @@ def export_session(session, trades, quotes, counts):
                 if kind == "last_trade_price" and matches(asset):
                     slug, side, _ = tokens[asset]
                     price, size = Decimal(event["price"]), Decimal(event["size"])
+                    if not price.is_finite() or not size.is_finite() or not 0 < price < 1 or size <= 0:
+                        counts["invalid_trade_rows"] += 1
+                        continue
                     trades.writerow(row_for(ts_ms, slug, kind, {
                         side: (price, price, size, price, size, "0.0"),
                     }))
@@ -110,7 +115,16 @@ def export_session(session, trades, quotes, counts):
 
                 updated = {}
                 if kind == "book" and matches(asset):
-                    books[asset] = (get_levels(event["bids"]), get_levels(event["asks"]))
+                    try:
+                        books[asset] = (get_levels(event["bids"]), get_levels(event["asks"]))
+                    except (ValueError, TypeError, KeyError, InvalidOperation):
+                        books.pop(asset, None)
+                        desynchronized.add(asset)
+                        counts["invalid_snapshots"] += 1
+                        continue
+                    if asset in desynchronized:
+                        counts["snapshot_recovered"] += 1
+                    desynchronized.discard(asset)
                     updated[asset] = (None, None)
                 elif kind == "price_change":
                     for change in event["price_changes"]:
@@ -120,8 +134,14 @@ def export_session(session, trades, quotes, counts):
                         if candidate not in books:
                             counts["delta_before_snapshot"] += 1
                             continue
-                        levels = books[candidate][{"BUY": 0, "SELL": 1}[change["side"]]]
                         price, size = Decimal(change["price"]), Decimal(change["size"])
+                        if (not price.is_finite() or not size.is_finite() or not 0 < price < 1
+                                or size < 0 or change["side"] not in ("BUY", "SELL")):
+                            books.pop(candidate, None)
+                            desynchronized.add(candidate)
+                            counts["invalid_deltas"] += 1
+                            continue
+                        levels = books[candidate][{"BUY": 0, "SELL": 1}[change["side"]]]
                         if size == 0:
                             levels.pop(price, None)
                         else:
@@ -130,9 +150,20 @@ def export_session(session, trades, quotes, counts):
                 elif kind == "market_resolved":
                     for candidate in event.get("assets_ids", []):
                         books.pop(candidate, None)
+                        desynchronized.discard(candidate)
 
                 values = {}
                 for candidate, reported in updated.items():
+                    if candidate not in books:
+                        continue
+                    bids, asks = books[candidate]
+                    if bids and asks and any(value is not None and Decimal(value) != actual
+                            for value, actual in zip(reported, (max(bids), min(asks)))):
+                        desynchronized.add(candidate)
+                        counts["bbo_mismatch"] += 1
+                    if candidate in desynchronized:
+                        counts["unusable_quote_sides"] += 1
+                        continue
                     current = quote(books[candidate], reported)
                     if current is None:
                         counts["unusable_quote_sides"] += 1
