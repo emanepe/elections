@@ -1,6 +1,28 @@
-# Election market comparison: SIG and Polymarket
+# Election market research: SIG and Polymarket
 
-Local scripts originally last modified on October 13, 2026, preserved here with their supporting module.
+The repository includes SIG/Polymarket snapshot comparison scripts and continuous Polymarket election order-book research.
+
+## Polymarket order-book research (Seungwoo)
+
+The [orderbook/](orderbook/) module records public Yes/No market-stream messages, exports quote and trade CSVs, and tests order-book imbalance against later quote-midpoint changes. It includes quote reconstruction checks, signal-transition sampling, failed-signal diagnostics, and configurable entry-delay/cost scenarios.
+
+- [Setup and commands](orderbook/README.md)
+- [November 4 findings and limitations](orderbook/FINDINGS.md)
+- [Market/signal summary CSVs](orderbook/reports/20261104/)
+
+Run its 21 tests from the module directory:
+
+```sh
+cd orderbook
+python3 -m unittest -v
+node --check capture.mjs
+```
+
+The order-book module does not place orders. Raw capture logs and generated observation files are excluded from Git.
+
+## SIG and Polymarket snapshot comparison
+
+The original comparison scripts were last modified locally on October 13, 2026 and are preserved with their supporting module.
 
 ## What it extracts
 
@@ -9,7 +31,7 @@ Local scripts originally last modified on October 13, 2026, preserved here with 
 - Polymarket YES order-book midpoints and Gamma outcome prices.
 - Matched price differences, unmatched SIG markets, and a position-sizing preview.
 
-This is a snapshot comparison tool, not a continuous Polymarket best-bid/ask logger. Market discovery is driven by currently open SIG markets; it is not restricted exclusively to elections. The helper module reads Polymarket bid/ask books to calculate midpoint references but does not export those bid/ask levels as a dataset.
+The comparison script is a snapshot tool; use [orderbook/](orderbook/) for continuous Polymarket quote logging. Market discovery is driven by currently open SIG markets; it is not restricted exclusively to elections. The helper module reads Polymarket bid/ask books to calculate midpoint references but does not export those bid/ask levels as a dataset.
 
 ## Setup
 
@@ -51,4 +73,4 @@ The original code is preserved. API availability and compatibility have not been
 
 ## Validation
 
-Both scripts were checked for Python syntax and the comparison CLI's `--help` was run locally. No API keys, account snapshots, trading journals, or generated datasets are included.
+Both comparison scripts were checked for Python syntax and the comparison CLI's `--help` was run locally. No API keys, account snapshots, trading journals, or generated comparison datasets are included. The order-book module includes aggregate research summaries; its 21 tests and Node.js syntax check pass.

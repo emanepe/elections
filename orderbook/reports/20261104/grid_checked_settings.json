@@ -1,0 +1,18 @@
+{
+  "sampling": "grid",
+  "horizons_ms": [
+    100,
+    500,
+    1000,
+    5000,
+    30000
+  ],
+  "threshold": "0.2",
+  "latency_ms": 0,
+  "round_trip_fee_cents": "0",
+  "cutoff_utc": "2026-11-04T11:34:09Z",
+  "sessions": [
+    "2026-11-04T10-42-47-696Z",
+    "2026-11-04T10-49-58-491Z"
+  ]
+}

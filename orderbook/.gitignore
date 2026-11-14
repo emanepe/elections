@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+.env
+.env.*
+ws_data/
+data_test/
+sample_live/
+exports/
+results/
+*.jsonl

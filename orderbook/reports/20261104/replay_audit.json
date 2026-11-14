@@ -1,0 +1,27 @@
+{
+  "2026-11-04T10-42-47-696Z": {
+    "connect": 1,
+    "messages": 6409,
+    "book": 26,
+    "best_bid_ask": 788,
+    "price_change": 5441,
+    "new_market": 152,
+    "last_trade_price": 9,
+    "bbo_mismatch": 6,
+    "snapshot_recovered": 2
+  },
+  "2026-11-04T10-49-58-491Z": {
+    "connect": 2,
+    "messages": 110326,
+    "book": 424,
+    "price_change": 84413,
+    "best_bid_ask": 22868,
+    "last_trade_price": 204,
+    "bbo_mismatch": 270,
+    "new_market": 2427,
+    "snapshot_recovered": 80,
+    "tick_size_change": 4,
+    "disconnect": 2,
+    "end": 1
+  }
+}
