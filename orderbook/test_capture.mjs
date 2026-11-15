@@ -86,6 +86,18 @@ test('event links expand to active binary questions', async () => {
   assert.equal(markets.length,1);
 });
 
+test('cancellation during market lookup aborts the HTTP request', async () => {
+  const controller = new AbortController();
+  let called;
+  const pending = resolveMarkets(['test-market'], (_url, options) => new Promise((_resolve,reject) => {
+    called = true;
+    options.signal.addEventListener('abort',()=>reject(options.signal.reason),{once:true});
+  }),()=>{},controller.signal);
+  controller.abort();
+  await assert.rejects(pending, error => error.name === 'AbortError');
+  assert.equal(called,true);
+});
+
 test('actual market messages are persisted before success with receipt clocks', async t => {
   const {result,output} = await capture(t);
   assert.equal(result.state,'complete');

@@ -6,6 +6,7 @@ The repository includes SIG/Polymarket snapshot comparison scripts and continuou
 
 The [orderbook/](orderbook/) module records public Yes/No market-stream messages, exports quote and trade CSVs, and tests order-book imbalance against later quote-midpoint changes. It includes quote reconstruction checks, signal-transition sampling, failed-signal diagnostics, and configurable entry-delay/cost scenarios.
 
+- [Button-based browser UI](orderbook/README.md#버튼-화면으로-실행) — double-click `orderbook/Start.command` on Mac, or run `python3 orderbook/ui.py`
 - [Operator quick start](orderbook/QUICKSTART.md)
 - [Setup and commands](orderbook/README.md)
 - [November 4 findings and limitations](orderbook/FINDINGS.md)
@@ -18,6 +19,7 @@ cd orderbook
 python3 -m unittest -v
 node --check capture.mjs
 node --test test_capture.mjs
+node --check ui/app.js
 ```
 
 The order-book module does not place orders. Raw capture logs and generated observation files are excluded from Git.

@@ -30,3 +30,9 @@ python3 run.py --markets-file markets.example.txt --minutes 0.5
 접속 시점에 예시 질문이 종료되었거나 네트워크 접근이 제한되면 활성 링크/연결 환경을 확인합니다. 실패 시 수집 대상이 자동으로 다른 시장으로 바뀌지 않습니다. 실시간 원본과 생성 결과는 Git에 포함하지 않습니다.
 
 프로토콜 기준: [Polymarket 공식 Real-Time Data 문서](https://docs.polymarket.com/market-data/realtime-data)의 Market Stream / API 항목. 공개 market 소켓의 assets_ids 구독, 10초 PING/PONG, book 및 price_change 메시지를 사용합니다.
+
+## 2026-11-15 버튼 화면 연동 검사
+
+로컬 UI 서버를 통해 실제 API 검색, 수집 시작, 저장 후 중지, 결과 상태 조회, CSV 다운로드를 확인했습니다. 검색 결과는 활성 질문 10개였고, 시험 대상은 위와 같은 활성 2028 대선 질문 두 개였습니다. 메시지 5개를 기록한 뒤 수집은 stopped / 종료 코드 0으로 끝났고, CSV 다운로드는 1,685바이트로 확인했습니다. 분석 처리도 완료됐습니다. 이 짧은 기록은 조작 흐름 검사이며 전략 검증 표본이 아닙니다.
+
+현재 자동 테스트는 Python 36개와 Node.js 11개가 통과했습니다. UI의 중복 수집 방지, 요청 검증, 파일 다운로드 범위, 지난 기록 복원, CSV 생성 중 중지 방지 등을 포함합니다. 브라우저용 JavaScript와 Mac 시작 스크립트 문법, HTML의 컨트롤 ID 참조도 검사했습니다. 실제 브라우저의 화면 배치·클릭에 대한 검사는 수행하지 못했으며, 위 UI 검증은 HTTP 요청을 통한 연동 검사입니다.

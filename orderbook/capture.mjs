@@ -79,9 +79,10 @@ function errorText(e) {
   return `${e.message ?? e}${e.cause?.code ? ` (${e.cause.code})` : ''}`;
 }
 
-export async function resolveMarkets(targets, fetchImpl = fetch, onProgress = () => {}) {
+export async function resolveMarkets(targets, fetchImpl = fetch, onProgress = () => {}, signal) {
   async function request(path, allowNotFound = false) {
-    const response = await fetchImpl(GAMMA + path, { signal: AbortSignal.timeout(12000) });
+    const timeout = AbortSignal.timeout(12000);
+    const response = await fetchImpl(GAMMA + path, { signal: signal ? AbortSignal.any([signal,timeout]) : timeout });
     if (allowNotFound && response.status === 404) return null;
     if (!response.ok) throw Error(`마켓 조회 HTTP ${response.status}: ${path}`);
     return response.json();
@@ -89,6 +90,7 @@ export async function resolveMarkets(targets, fetchImpl = fetch, onProgress = ()
   const markets = new Map();
   // Fail rather than silently dropping a requested market.
   for (const value of new Set(targets)) {
+    signal?.throwIfAborted();
     onProgress('활성 마켓 조회:', value);
     const ref = targetReference(value);
     const single = ref.event ? null : await request('/markets/slug/' + ref.slug, true);
@@ -117,7 +119,7 @@ export async function runCapture(options, dependencies = {}) {
   const { WebSocketImpl = WebSocket, fetchImpl = fetch, log = console.log,
     heartbeatMs = 10000, heartbeatTimeoutMs = 25000, openTimeoutMs = 12000,
     snapshotTimeoutMs = 20000, reconnectDelayMs = 2000, progressMs = 5000 } = dependencies;
-  const markets = await resolveMarkets(options.targets, fetchImpl, log);
+  const markets = await resolveMarkets(options.targets, fetchImpl, log, options.signal);
   const assets = markets.flatMap(m => m.tokens.map(t => t.id));
   const tokenMarkets = new Map(markets.flatMap(m => m.tokens.map(t => [t.id, m.condition_id])));
   const started = new Date();

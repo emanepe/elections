@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="local-token" content="__LOCAL_TOKEN__">
+<meta name="description" content="Polymarket 공개 호가 수집과 분석을 버튼으로 실행합니다.">
+<title>Orderbook Lab · 실시간 호가 수집</title>
+<link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script>
+</head>
+<body>
+<div class="shell">
+<header><a class="brand" href="#"><span class="brand-icon" aria-hidden="true">▥</span><span>ORDERBOOK <b>LAB</b></span></a><div class="header-right"><a href="#results">수집 결과</a><span id="server-status" class="connection"><i></i>연결 확인 중</span></div></header>
+<main>
+<div class="page-heading"><div><div class="eyebrow">POLYMARKET RESEARCH</div><h1>실시간 호가 수집</h1><p>마켓을 고르고 시작하세요. 데이터 저장과 분석은 자동으로 진행됩니다.</p></div><span class="local-tag">내 컴퓨터에서 실행 중</span></div>
+<div id="notice" class="notice hidden" role="alert"></div>
+<div class="workspace">
+<section class="card setup" aria-labelledby="setup-title"><div class="card-heading"><h2 id="setup-title">새 수집</h2><span class="subtle">공개 Yes / No 데이터</span></div>
+<div class="step-heading"><span class="step-number">1</span><h3>마켓 선택</h3></div>
+<form id="search-form"><label for="search-input" class="sr-only">영어 마켓 검색어</label><div class="search-row"><input id="search-input" placeholder="영어로 검색 · Senate, 2028…" maxlength="150" autocomplete="off"><button id="search-button" class="secondary" type="submit">검색</button></div></form>
+<div class="quick-queries"><button type="button" data-query="2028 presidential election">미국 대선</button><button type="button" data-query="Senate">상원</button><button id="example-button" type="button">연결 시험용 2개 불러오기 ↗</button></div>
+<p id="search-status" class="helper" aria-live="polite">화면에서 검색해 추가하거나, 아래에 링크를 직접 넣어 주세요.</p>
+<div id="search-results" class="search-results hidden" aria-label="마켓 검색 결과"></div>
+<label class="field-label" for="targets">선택한 마켓 <span id="target-count">0개</span></label>
+<textarea id="targets" rows="4" placeholder="Polymarket 링크 또는 slug를 한 줄에 하나씩&#10;여러 질문을 함께 수집할 수 있습니다." spellcheck="false"></textarea>
+<p class="helper">활성 이벤트 링크를 넣으면 그 안의 활성 질문도 함께 수집합니다. 최대 20질문.</p>
+<div class="step-heading second-step"><span class="step-number">2</span><h3>수집 시간</h3></div>
+<div class="duration-options" role="group" aria-label="수집 시간 선택"><button type="button" data-minutes="0.25">15초 시험</button><button type="button" data-minutes="10">10분</button><button type="button" data-minutes="80" class="selected" aria-pressed="true">80분</button><label class="custom-duration"><input id="minutes" type="number" min="0.01" max="1440" step="0.01" value="80" aria-label="수집 시간 분"><span>분</span></label></div>
+<p id="duration-note" class="helper">수신 메시지는 도착할 때마다 저장합니다.</p>
+<details class="advanced"><summary>모의 손익 설정 <span>선택 사항</span></summary><div class="advanced-fields"><label>가정 진입 지연 <div class="input-unit"><input id="latency" type="number" value="0" min="0" max="99" step="1"><span>ms</span></div></label><label>가정 왕복 비용 <div class="input-unit"><input id="fee" type="number" value="0" min="0" max="100" step="0.01"><span>센트</span></div></label></div><p class="helper">실제 수수료·지연 측정값이 아닙니다. 기본값은 모두 0입니다.</p></details>
+<div class="actions"><button id="start-button" class="primary" type="button" disabled>▶ 수집 시작</button><button id="stop-button" class="stop" type="button" disabled>저장하고 중지</button></div>
+<p class="footer-note">실행창과 컴퓨터를 켜 두세요. 종료된 선거 질문은 새로 수집할 수 없습니다.</p>
+</section>
+<section class="card monitor" aria-labelledby="monitor-title"><div class="card-heading"><h2 id="monitor-title">수집 현황</h2><span id="phase-badge" class="badge neutral">준비</span></div>
+<div id="idle-state" class="idle"><div class="idle-symbol" aria-hidden="true"><span></span><b>▥</b></div><h3>수집할 준비가 됐습니다</h3><p>왼쪽에서 마켓을 선택하고<br>수집 시작을 눌러 주세요.</p><div class="flow-label">실시간 수집 <span>→</span> CSV 저장 <span>→</span> 탐색 분석</div></div>
+<div id="job-state" class="hidden"><div class="job-status"><span id="live-dot" class="live-dot"></span><div><h3 id="phase-title">연결 중</h3><p id="phase-description">마켓을 확인합니다.</p></div></div>
+<div class="metrics"><div><span>받은 메시지</span><strong id="message-count">0</strong><small id="useful-count">호가·체결 0개</small></div><div><span>현재 연결의 초기 호가</span><strong id="snapshot-count">0 / 0</strong><small>Yes · No 전체 토큰</small></div><div><span>수집 경과</span><strong id="elapsed">00:00</strong><small id="last-message">수신 대기</small></div></div>
+<div class="progress-track"><div id="progress-fill"></div></div><div class="progress-caption"><span id="progress-label">마켓 확인 중</span><span id="duration-label">목표 80분</span></div>
+<div class="observed-heading">관찰 중인 질문</div><ul id="observed-markets" class="observed-markets"></ul>
+<div id="job-warning" class="job-warning hidden" role="status"></div>
+</div>
+<details class="logs"><summary>진행 로그 <span>연결·오류 확인</span></summary><pre id="log-output">수집을 시작하면 여기에 진행 상태가 표시됩니다.</pre></details>
+</section>
+</div>
+<section id="results" class="card results" aria-labelledby="results-title"><div class="card-heading result-heading"><div><h2 id="results-title">수집 결과</h2><p>수집을 마치면 파일을 내려받고 간단한 분석을 확인할 수 있습니다.</p></div><label class="history-label">수집 기록<select id="history" aria-label="지난 수집 기록"><option value="">아직 수집 기록이 없습니다</option></select></label></div>
+<div id="files" class="files"><div class="empty-files">완료된 결과 파일이 여기에 표시됩니다.</div></div>
+<div id="analysis" class="hidden"><div class="analysis-heading"><div><h3>우세 신호 이후의 가격 변화</h3><p>Yes 호가 중간값 기준 · 매수 우세는 상승, 매도 우세는 하락을 예상합니다.</p></div><label>비교 시점<select id="horizon"><option value="100">0.1초 뒤</option><option value="500">0.5초 뒤</option><option value="1000">1초 뒤</option><option value="5000" selected>5초 뒤</option><option value="30000">30초 뒤</option></select></label></div>
+<div class="table-wrap"><table><thead><tr><th>질문 / 신호</th><th>표본</th><th>예상 방향</th><th>보합</th><th>반대</th><th>평균 모의 손익</th></tr></thead><tbody id="analysis-body"></tbody></table></div><p class="helper analysis-note">가격 방향 일치가 수익을 의미하지 않습니다. 손익은 설정한 비용·진입 지연을 적용한 계약당 센트이며 실제 체결 기록이 아닙니다.</p></div>
+<p id="analysis-empty" class="helper">연결 시험의 짧은 데이터만으로 전략을 판단하지 마세요.</p>
+</section>
+<footer><span>Orderbook Lab</span><p>공개 데이터 수집·탐색 연구용 · 주문을 실행하지 않습니다.</p></footer>
+</main>
+</div>
+</body></html>
